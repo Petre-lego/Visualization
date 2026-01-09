@@ -1,13 +1,14 @@
-from dash import Dash, html, dcc, Input, Output, State
+from dash import Dash, html, dcc, Input, Output, State, MATCH, ALL, Patch
+import dash # Needed of callback_context
 import os
 import webbrowser
 from figures import *
-
+import plotly.express as px
  
 # This function arranges the plots in an html layout
-def draw_pane(topbar_tab, decades_list, current_decade, layout="grid", bin_size="5 months"):
+def draw_pane(topbar_tab, decades_list, current_decade, layout="grid", bin_size="5 months", selected_genres=None):
     if topbar_tab == "topic-1":
-        content = draw_figure(topbar_tab, decades_list, current_decade)
+        content = draw_figure(topbar_tab, decades_list, current_decade, selected_genres=selected_genres)
         filename = current_decade + ".png"
         pane = html.Div(
             style={
@@ -93,6 +94,7 @@ def draw_pane(topbar_tab, decades_list, current_decade, layout="grid", bin_size=
             pane = f"You have selected Topbar Tab: {topbar_tab} and Sidebar Tab: {current_decade}, The layout you specified ({layout}) is not yet implemented"
     elif topbar_tab == "topic-4":
         pane = draw_figure(topbar_tab, decades_list, current_decade)
+    
     elif topbar_tab == "topic-5":
         if layout == "grid":
             # Get available songs for the selected decade
@@ -110,7 +112,17 @@ def draw_pane(topbar_tab, decades_list, current_decade, layout="grid", bin_size=
                 },
                 children=[
                     # Row 1
-                    html.Div(dcc.Graph(figure=draw_spider_analysis1(decades_list, current_decade)), style={"background": "rgba(0,0,0,0)", "padding": "3px", "minWidth": "0"}),
+                    html.Div([
+                        html.Div(
+                            dcc.Graph(figure=draw_spider_analysis1(decades_list, current_decade), style={'height': '100%', 'width': '100%'}),
+                            style={"flex": "2", "position": "relative"} # Top 66%
+                        ),
+                        html.Div(
+                            dcc.Graph(figure=draw_genre_trends_overlay(current_decade), style={'height': '100%', 'width': '100%'}),
+                            style={"flex": "1", "minHeight": "0"} # Bottom 33% (1/(2+1))
+                        ),
+
+                    ], style={"background": "rgba(0,0,0,0)", "padding": "3px", "minWidth": "0", "position": "relative", "display": "flex", "flexDirection": "column", "height": "100%"}),
                     html.Div(dcc.Graph(id='area-plots-graph', figure=draw_area_plots(decades_list, current_decade, features=["Energy", "Danceability", "Valence", "Acousticness", "Instrumentalness", "Loudness", "Tempo", "Liveness"])), style={"background": "rgba(0,0,0,0)", "padding": "3px", "minWidth": "0"}),
                     html.Div(
                         style={"display": "flex", "flexDirection": "column", "height": "100%"},
@@ -180,7 +192,22 @@ def draw_pane(topbar_tab, decades_list, current_decade, layout="grid", bin_size=
                             }
                         )
                     ], style={"background": "rgba(0,0,0,0)", "padding": "3px", "display": "flex", "flexDirection": "column", "minWidth": "0"}),
-                    html.Div(dcc.Graph(id="spider-graph", figure=draw_spider(current_decade, available_songs[0][1] if available_songs else None, available_songs[1][1] if len(available_songs) > 1 else None)), style={"background": "rgba(0,0,0,0)", "padding": "3px", "minWidth": "0"}),
+                    html.Div([
+                        dcc.Graph(id="spider-graph", figure=draw_spider(current_decade, available_songs[0][1] if available_songs else None, available_songs[1][1] if len(available_songs) > 1 else None)),
+                        html.Div([
+                            html.Div("i", className="info-icon"),
+                            html.Div([
+                                 html.H4("Audio Features Key"),
+                                 html.Ul([
+                                     html.Li([html.Strong("Energy: "), "Intensity/Speed/Noise"]),
+                                     html.Li([html.Strong("Danceability: "), "Rhythm stability/Beat"]),
+                                     html.Li([html.Strong("Valence: "), "Musical Positiveness (Happy vs Sad)"]),
+                                     html.Li([html.Strong("Acousticness: "), "Unplugged/Natural sound"]),
+                                     html.Li([html.Strong("Instrumentalness: "), "Lack of vocals"])
+                                 ])
+                            ], className="info-tooltip")
+                        ], className="info-container")
+                    ], style={"background": "rgba(0,0,0,0)", "padding": "3px", "minWidth": "0", "position": "relative"}),
                     
                     # Row 3
                     html.Div(style={"background": "rgba(0,0,0,0)", "padding": "3px", "minWidth": "0"}),
@@ -235,43 +262,57 @@ app.layout = html.Div(id = "root_container", children=[
     
     #Topbar
     html.Div(children = [
-        dcc.Tabs(id="topbar_tabs", value="topic-1", children=[
-            dcc.Tab(label="Analysis 1", value="topic-1"),
-            dcc.Tab(label="Analysis 2", value="topic-2"),
-            dcc.Tab(label="Compare/Listen", value="topic-3"),
-            dcc.Tab(label="Changes", value="topic-4"),
-            dcc.Tab(label="Prototype Dashboard", value="topic-5")
+        dcc.Tabs(id="topbar_tabs", value="topic-1", 
+            parent_style={"flexDirection": "row", "width": "100%"},
+            children=[
+            dcc.Tab(label="Analysis 1", value="topic-1", className="top-tab", selected_className="top-tab--selected"),
+            dcc.Tab(label="Compare/Listen", value="topic-3", className="top-tab", selected_className="top-tab--selected"),
+            dcc.Tab(label="Changes", value="topic-4", className="top-tab", selected_className="top-tab--selected"),
+            dcc.Tab(label="Prototype Dashboard", value="topic-5", className="top-tab", selected_className="top-tab--selected")
         ])
-    ], #TODO fix the dimensions of the tabs this can be done by disabeling mobile mode
-             style={"background" : "#3D2C2C", "flexDirection" : "column"}), #careful height topbar depends on height of dcc.tabs
+    ], 
+             style={"background" : "rgba(20, 22, 35, 0.95)", "flexDirection" : "column", "borderBottom": "1px solid rgba(255,255,255,0.1)", "boxShadow": "0 4px 15px rgba(0,0,0,0.3)", "zIndex": "1001"}), 
+
 
     dcc.Store(id='selected_decades', data=[]),
     dcc.Store(id='bin_size', data='5 months'),
     dcc.Store(id='previous_decade', data=None),
     dcc.Store(id='animation_trigger', data=0),
+    dcc.Store(id='selected_genres_store', data=None),
 
     # Horizontal Pane
     html.Div(children = [
-        #Sidebar
+        # Main content area (Now full width)
+        html.Div(id="content_area", children = "Loading...", style={"flex" : "1", "position": "relative", "overflow": "hidden", "height": "100%"}), # Added height 100%
+
+        # Floating Decades Menu (Formerly Sidebar)
         html.Div(children = [
-            dcc.Tabs(id="sidebar_tabs", vertical = True, value="20s", children=[
-                dcc.Tab(label="50s", value="50s"),
-                dcc.Tab(label="60s", value="60s"),
-                dcc.Tab(label="70s", value="70s"),
-                dcc.Tab(label="80s", value="80s"),
-                dcc.Tab(label="90s", value="90s"),
-                dcc.Tab(label="00s", value="00s"),
-                dcc.Tab(label="10s", value="10s"),
-                dcc.Tab(label="20s", value="20s"),
+            dcc.Tabs(id="sidebar_tabs", vertical=False, value="20s", 
+                parent_style={"flexDirection": "row", "justifyContent": "center"}, # Center tabs
+                children=[
+                dcc.Tab(label="50s", value="50s", className="decade-tab", selected_className="decade-tab--selected"),
+                dcc.Tab(label="60s", value="60s", className="decade-tab", selected_className="decade-tab--selected"),
+                dcc.Tab(label="70s", value="70s", className="decade-tab", selected_className="decade-tab--selected"),
+                dcc.Tab(label="80s", value="80s", className="decade-tab", selected_className="decade-tab--selected"),
+                dcc.Tab(label="90s", value="90s", className="decade-tab", selected_className="decade-tab--selected"),
+                dcc.Tab(label="00s", value="00s", className="decade-tab", selected_className="decade-tab--selected"),
+                dcc.Tab(label="10s", value="10s", className="decade-tab", selected_className="decade-tab--selected"),
+                dcc.Tab(label="20s", value="20s", className="decade-tab", selected_className="decade-tab--selected"),
             ])
-    ], 
-             style={"background" : "#3D2C2C", "height": "100%"}), #Sidebar style: Changed to 100% to respect flex parent
-        
-        #Main content area
-        html.Div(id="content_area", children = "Here we will put the Main content area", style={"flex" : "1", "position": "relative", "overflow": "hidden"}) #Flex 1 to take up all remaining space, added overflow: hidden
+        ], 
+        style={
+            "position": "absolute", 
+            "bottom": "0", 
+            "width": "100%", 
+            "padding": "10px", 
+            "background": "linear-gradient(to top, rgba(0,0,0,0.9) 0%, rgba(0,0,0,0) 100%)", # Gradient fade
+            "display": "flex",
+            "justifyContent": "center",
+            "zIndex": "1000"
+        }), 
     ],
     #Options
-    style={"display" : "flex", "flexDirection" : "row", "flex" : "1", "minHeight": "0", "overflow": "hidden"} #flex 1 take up all remaining space but will not overrule total size of root container
+    style={"display" : "flex", "flexDirection" : "column", "flex" : "1", "minHeight": "0", "overflow": "hidden", "position": "relative"} # Changed to column to stack if needed, but mainly relative for absolute child
     ),
 
     #Bottom bar (Credits logos and so on)
@@ -295,12 +336,13 @@ app.layout = html.Div(id = "root_container", children=[
     State(component_id="bin_size", component_property="data"),
     State(component_id="previous_decade", component_property="data"),
     State(component_id="animation_trigger", component_property="data"),
+    State(component_id="selected_genres_store", component_property="data"),
     allow_duplicate=True
 )
 
 # The order of the parameters is always the same as the order of the Inputs
 # just keep that in mind if you add more Inputs
-def render_content(topbar_tab_value, sidebar_tab_value, selected_decades, bin_size, previous_decade, animation_trigger):
+def render_content(topbar_tab_value, sidebar_tab_value, selected_decades, bin_size, previous_decade, animation_trigger, selected_genres):
     # This function takes the Input value as an argument
 
     selected_decades = selected_decades or []
@@ -324,7 +366,16 @@ def render_content(topbar_tab_value, sidebar_tab_value, selected_decades, bin_si
               "background-repeat": "no-repeat"
          })
     
-    return draw_pane(topbar_tab_value, selected_decades, sidebar_tab_value, bin_size=bin_size), root_style, selected_decades, sidebar_tab_value, animation_trigger
+    return draw_pane(topbar_tab_value, selected_decades, sidebar_tab_value, bin_size=bin_size, selected_genres=selected_genres), root_style, selected_decades, sidebar_tab_value, animation_trigger
+
+# Callback to persist selected genres
+@app.callback(
+    Output("selected_genres_store", "data"),
+    Input("genre-dropdown", "value"),
+    prevent_initial_call=True
+)
+def save_selected_genres(genres):
+    return genres
 
 # Callback for Analysis 1 Genre Filtering
 @app.callback(
@@ -377,9 +428,15 @@ def update_analysis1(selected_genres, current_decade):
         current_row_len = 0
         target_row_len = 3 # Start with 3 items in first row
         
+        # Color cycle to match area plots
+        colors_cycle = px.colors.qualitative.Plotly
+        
         for i, genre in enumerate(selected_genres):
             # Calculate alternating background color
             bg_color = bg_colors[i % len(bg_colors)]
+            
+            # Select line color matching the area plot
+            line_color = colors_cycle[i % len(colors_cycle)]
             
             cell_style_override = {
                 "width": f"{s_w}px",
@@ -389,12 +446,12 @@ def update_analysis1(selected_genres, current_decade):
             }
 
             # Generate spider graph for this specific genre
-            # We reuse draw_spider_analysis1 but pass only [genre] to filter
-            fig = draw_spider_analysis1(decades_list, current_decade, selected_genres=[genre])
+            # We reuse draw_spider_analysis1 but pass only [genre] to filter, and pass the color
+            fig = draw_spider_analysis1(decades_list, current_decade, selected_genres=[genre], override_color=line_color)
             
             # Customize layout for the grid item
             fig.update_layout(
-                title=dict(text=f"{genre.title()}", font=dict(size=s_font), y=0.95),
+                title=dict(text=f"{genre.title()}", font=dict(size=s_font, color=line_color), y=0.95), 
                 margin=dict(l=20*scale, r=20*scale, t=40*scale, b=20*scale),
                 height=s_h, # Match container height
                 font=dict(size=max(8, 10*scale)) # Scale axis labels too
@@ -406,6 +463,7 @@ def update_analysis1(selected_genres, current_decade):
                     style=cell_style_override,
                     children=[
                         dcc.Graph(
+                            id={'type': 'spider-genre', 'index': genre}, # Dynamic ID for pattern matching
                             figure=fig, 
                             config={'displayModeBar': False},
                             style={"height": "100%", "width": "100%"}
@@ -443,6 +501,55 @@ def update_analysis1(selected_genres, current_decade):
         selected_genres=selected_genres
     )
     return spider_graphs_children, area_fig
+
+# Callback to handle click interactions from spider graphs
+@app.callback(
+    Output("analysis1-area", "figure", allow_duplicate=True),
+    Input({'type': 'spider-genre', 'index': ALL}, 'clickData'),
+    State("analysis1-area", "figure"),
+    prevent_initial_call=True
+)
+def update_area_highlight(click_data_list, current_figure):
+    # Determine which graph triggered the click
+    # Dash pattern matching trigger context
+    ctx = dash.callback_context
+    if not ctx.triggered:
+        return dash.no_update
+    
+    # Check if any click data exists
+    if not any(click_data_list):
+        return dash.no_update
+
+    # Extract the genre ID from the triggered input
+    triggered_prop_id = ctx.triggered[0]['prop_id']
+    import json
+    try:
+        # prop_id is like '{"index":"pop","type":"spider-genre"}.clickData'
+        prop_id_dict = json.loads(triggered_prop_id.split('.')[0])
+        clicked_genre = prop_id_dict['index']
+        
+        # Optimize using Patch() to update the existing figure client-side
+        # instead of re-calculating and re-sending the entire figure.
+        patched_figure = Patch()
+        
+        # Loop through all traces in the figure
+        # Note: current_figure['data'] is a list of trace objects
+        for i, trace in enumerate(current_figure['data']):
+             if 'name' in trace:
+                 # Check if this trace is the one we clicked
+                 # Ensure strict case matching (convert clicked to title case to match trace names)
+                 if trace['name'] == clicked_genre.title():
+                     patched_figure['data'][i]['line']['width'] = 5
+                     patched_figure['data'][i]['opacity'] = 1.0
+                 else:
+                     patched_figure['data'][i]['line']['width'] = 2
+                     patched_figure['data'][i]['opacity'] = 0.2
+                     
+        return patched_figure
+            
+    except Exception as e:
+        print(f"Error in update_area_highlight: {e}")
+        return dash.no_update
 
 #------------------------------------------------------------------------#
 # Listen/Spider Tab

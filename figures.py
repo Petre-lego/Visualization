@@ -60,10 +60,57 @@ def draw_genre_trends(decade_center=None):
         if center_year:
              fig.add_vline(x=center_year, line_width=2, line_dash="dash", line_color="white")
              
+    style_fig(fig)
+    return fig
+
+def draw_genre_trends_overlay(decade_center=None, selected_genre=None):
+    # Specialized version for the honeycomb overlay
+    # Transparent background, no title, minimized margins
+    
+    # Filter years 1950-2030
+    df = genre_year_counts[(genre_year_counts['year'] >= 1950) & (genre_year_counts['year'] <= 2030)].copy()
+    
+    if selected_genre:
+        df = df[df['playlist_genre'] == selected_genre]
+        # Ensure color consistency
+        # We need to map genre to color if we want specific colors
+        # But Plotly handles it if we map 'playlist_genre' to color
+        
+    top_genres = df.groupby('playlist_genre')['count'].sum().sort_values(ascending=False).index
+    
+    fig = px.line(df, x='year', y='count', color='playlist_genre', 
+                  category_orders={"playlist_genre": top_genres}) # No title
+    
+    fig.update_layout(
+         paper_bgcolor="rgba(0,0,0,0)", 
+         plot_bgcolor="rgba(0,0,0,0)",
+         font=dict(color="white"),
+         xaxis=dict(
+             showgrid=False, 
+             showticklabels=True,
+             tickfont=dict(size=10)
+         ),
+         yaxis=dict(
+             showgrid=True, 
+             gridcolor="rgba(255,255,255,0.1)",
+             showticklabels=False # Hide y-axis labels to save width/clutter
+         ),
+         showlegend=False, # Hide legend in small cells
+         margin=dict(l=10, r=10, t=5, b=20)
+    )
+    
+    if decade_center:
+        decade_centers = {
+            '50s': 1955, '60s': 1965, '70s': 1975, '80s': 1985, '90s': 1995, '00s': 2005, '10s': 2015, '20s': 2025
+        }
+        center_year = decade_centers.get(decade_center)
+        if center_year:
+             fig.add_vline(x=center_year, line_width=2, line_dash="dash", line_color="#4D96FF") # Electric Blue marker
+             
     return fig
 
 # Update the signature to accept optional song arguments
-def draw_figure(topbar_tab, decades_list, current_decade, song1=None, song2=None):
+def draw_figure(topbar_tab, decades_list, current_decade, song1=None, song2=None, selected_genres=None):
     decade_colors = {
         '50s': 'red',
         '60s': 'orange',
@@ -109,14 +156,14 @@ def draw_figure(topbar_tab, decades_list, current_decade, song1=None, song2=None
                 "flexDirection": "row", 
                 "width": "100%", 
                 "height": "100%", 
-                "padding": "20px",
+                "padding": "20px 20px 80px 20px", # Added bottom padding for timeline controls
                 "boxSizing": "border-box",
-                "gap": "20px"
+                # "gap": "20px" # REMOVE GAP
             }, 
             children=[
                  # Left Column: Spider Graphs
                  html.Div(
-                     style={"flex": "1", "display": "flex", "flexDirection": "column", "minWidth": "0", "height": "100%", "overflow": "hidden"},
+                     style={"flex": "1", "display": "flex", "flexDirection": "column", "minWidth": "0", "height": "100%", "overflow": "hidden", "position": "relative"},
                      children=[
                          # Genre Dropdown
                          html.Div(
@@ -126,7 +173,7 @@ def draw_figure(topbar_tab, decades_list, current_decade, song1=None, song2=None
                                      id='genre-dropdown',
                                      options=[{'label': g.title(), 'value': g} for g in get_genres()],
                                      multi=True,
-                                     value=[get_genres_for_decade(current_decade)[0]] if get_genres_for_decade(current_decade) else None, # Default to first genre available in this decade
+                                     value=selected_genres if selected_genres is not None else ([get_genres_for_decade(current_decade)[0]] if get_genres_for_decade(current_decade) else None), # Use persisted selection or default
                                      placeholder="Select Genres...",
                                      style={'color': 'black'}
                                  )
@@ -152,25 +199,53 @@ def draw_figure(topbar_tab, decades_list, current_decade, song1=None, song2=None
                                  "borderRadius": "5px"
                              }
                          ),
-                         # Grid for Spider Graphs (container)
+                         # Grid for Spider Graphs (container) - Top 66%
                          html.Div(
-                             id='spider-graphs-container',
-                             className='honeycomb-grid',
-                             style={
-                                 "flex": "1",
-                                 "overflowY": "auto", # Keep scroll as safety net
-                                 "overflowX": "hidden",
-                                 "width": "100%",
-                                 "alignContent": "center" # Center content vertically if few items
-                             },
-                             children=[] # Populated by callback
+                             style={"flex": "2", "position": "relative", "minHeight": "0", "display": "flex", "flexDirection": "column"}, 
+                             children=[
+                                 html.Div(
+                                     id='spider-graphs-container',
+                                     className='honeycomb-grid',
+                                     style={
+                                         "flex": "1",
+                                         "overflowY": "auto", 
+                                         "overflowX": "hidden",
+                                         "width": "100%",
+                                         "alignContent": "flex-start", # Changed from center to avoid top clipping
+                                         "paddingTop": "40px", # Compensate for negative margins
+                                         "paddingBottom": "20px"
+                                     },
+                                     children=[] 
+                                 ),
+
+                             ]
+                         ),
+                         
+                         # Bottom 33% - Genre Trends Overlay
+                         html.Div(
+                            style={"flex": "1", "minHeight": "0", "borderTop": "1px solid rgba(255,255,255,0.1)", "marginTop": "10px"},
+                            children=[
+                                dcc.Graph(
+                                    figure=draw_genre_trends_overlay(current_decade),
+                                    style={"height": "100%", "width": "100%"},
+                                    config={'displayModeBar': False}
+                                )
+                            ]
                          )
                      ]
                  ),
                  
                  # Right Column: Area Plots
                  html.Div(
-                     style={"flex": "1", "display": "flex", "flexDirection": "column", "minWidth": "0"},
+                     style={
+                         "flex": "1", 
+                         "display": "flex", 
+                         "flexDirection": "column", 
+                         "minWidth": "0",
+                         "border": "2px solid rgba(60, 65, 90, 0.7)", # Border matching honeycomb tone
+                         "borderRadius": "10px",
+                         "overflow": "hidden"
+                     },
                      children=[
                          # Area Plots Graph
                          html.Div(
@@ -186,35 +261,59 @@ def draw_figure(topbar_tab, decades_list, current_decade, song1=None, song2=None
             ]
         )
     elif topbar_tab == "topic-4":  # Filip's changes tab
-        # Use a grid layout for better proportions
+        # Use a flex column layout to strictly control vertical space
         figure = html.Div(
             style={
-                "display": "grid",
-                "gridTemplateColumns": "1fr 1fr",
-                "gridTemplateRows": "auto 1fr",
-                "gap": "20px",
+                "display": "flex",
+                "flexDirection": "column",
                 "height": "100%",
-                "padding": "20px"
+                "width": "100%",
+                "padding": "20px",
+                "boxSizing": "border-box",
+                "gap": "10px"
             },
             children=[
-                 # Top Row: Genre Trends Line Plot (full width)
+                 # Top Section: Genre Trends (40%)
                  html.Div(
-                     dcc.Graph(figure=draw_genre_trends(current_decade), config={'displayModeBar': False}),
-                     style={"gridColumn": "1 / -1", "height": "100%"}
+                     dcc.Graph(
+                         figure=draw_genre_trends(current_decade), 
+                         config={'responsive': True, 'displayModeBar': False},
+                         style={"height": "100%", "width": "100%"}
+                     ),
+                     style={"flex": "4", "minHeight": "0", "width": "100%"}
                  ),
                  
-                 # Bottom Row: Left - Asc/Desc Changes, Right - Decade Card
+                 # Bottom Section: Changes & Card (60%)
                  html.Div(
-                     style={"display": "flex", "flexDirection": "row", "gap": "20px", "gridColumn": "1 / -1"},
+                     style={"display": "flex", "flexDirection": "row", "gap": "20px", "flex": "6", "minHeight": "0", "width": "100%"},
                      children=[
+                         # Left: Asc/Desc Changes (Two graphs stacked)
                          html.Div(
                             children=[
-                                dcc.Graph(figure=draw_change(current_decade, genre_counts, "desc")),
-                                dcc.Graph(figure=draw_change(current_decade, genre_counts, "asc"))
+                                html.Div(
+                                    dcc.Graph(
+                                        figure=draw_change(current_decade, genre_counts, "desc"),
+                                        config={'responsive': True, 'displayModeBar': False},
+                                        style={"height": "100%", "width": "100%"}
+                                    ),
+                                    style={"flex": "1", "minHeight": "0"}
+                                ),
+                                html.Div(
+                                    dcc.Graph(
+                                        figure=draw_change(current_decade, genre_counts, "asc"),
+                                        config={'responsive': True, 'displayModeBar': False},
+                                        style={"height": "100%", "width": "100%"}
+                                    ),
+                                    style={"flex": "1", "minHeight": "0"}
+                                )
                             ],
-                            style={"flex": "1"}
+                            style={"flex": "1", "display": "flex", "flexDirection": "column", "gap": "10px", "height": "100%"}
                          ),
-                         html.Div(create_decade_card(current_decade), style={"flex": "1"})
+                         # Right: Decade Card
+                         html.Div(
+                             create_decade_card(current_decade),
+                             style={"flex": "1", "overflowY": "auto"}
+                         )
                      ]
                  )
             ]
@@ -227,7 +326,7 @@ def draw_figure(topbar_tab, decades_list, current_decade, song1=None, song2=None
 
 
 # New functions for Prototype Dashboard
-def draw_spider_analysis1(decades_list, current_decade, selected_genres=None):
+def draw_spider_analysis1(decades_list, current_decade, selected_genres=None, override_color=None):
     decade_rgb = {
         '50s': (255, 0, 0),
         '60s': (255, 165, 0),
@@ -251,12 +350,27 @@ def draw_spider_analysis1(decades_list, current_decade, selected_genres=None):
         if 'playlist_genre' in base_data.columns:
             base_data = base_data[base_data['playlist_genre'].isin(selected_genres)]
     
+    import plotly.colors as pcolors
+
     for decade in decades_list:
         filtered_data = base_data[base_data['decade'] == decade]
         
-        rgb = decade_rgb.get(decade, (128, 128, 128))
-        line_color_str = f'rgb({rgb[0]}, {rgb[1]}, {rgb[2]})'
-        fill_color_str = f'rgba({rgb[0]}, {rgb[1]}, {rgb[2]}, 0.2)' # 20% opacity
+        if override_color:
+            line_color_str = override_color
+            # Calculate fill color (semi-transparent version of override_color)
+            if override_color.startswith('#'):
+                rgb_tuple = pcolors.hex_to_rgb(override_color)
+                fill_color_str = f'rgba({rgb_tuple[0]}, {rgb_tuple[1]}, {rgb_tuple[2]}, 0.2)'
+            elif override_color.startswith('rgb'):
+                # Assumes format "rgb(r, g, b)"
+                vals = override_color[4:-1].split(',')
+                fill_color_str = f'rgba({vals[0]},{vals[1]},{vals[2]},0.2)'
+            else:
+                fill_color_str = override_color # Fallback
+        else:
+            rgb = decade_rgb.get(decade, (128, 128, 128))
+            line_color_str = f'rgb({rgb[0]}, {rgb[1]}, {rgb[2]})'
+            fill_color_str = f'rgba({rgb[0]}, {rgb[1]}, {rgb[2]}, 0.2)' # 20% opacity
         
         if filtered_data.empty:
             avg_values = [None] * len(categories)
@@ -287,13 +401,20 @@ def draw_spider_analysis1(decades_list, current_decade, selected_genres=None):
     
     fig.update_layout(
         polar=dict(
-            radialaxis=dict(visible=True, range=[0, 1.6]), # Increased range to accommodate labels
+            radialaxis=dict(
+                visible=True, 
+                range=[0, 1.6], # Increased range to accommodate labels
+                gridcolor="rgba(255, 255, 255, 0.2)", # Less intense grid
+                linecolor="rgba(255, 255, 255, 0.2)"
+            ), 
             bgcolor="rgba(0,0,0,0)",
             gridshape='linear',
             angularaxis=dict(
                 rotation=90,  # Ensure first vertex (Energy) is at the top (12 o'clock)
                 direction="clockwise",
                 showticklabels=False, # Hide default labels
+                gridcolor="rgba(255, 255, 255, 0.2)", # Less intense angular grid
+                linecolor="rgba(255, 255, 255, 0.2)"
             )
         ),
         showlegend=False,
@@ -322,26 +443,31 @@ def draw_feature_explanations():
     return html.Div(
         style={
             "display": "grid",
-            "gridTemplateColumns": "1fr 1fr",
-            "gap": "15px",
-            "padding": "20px",
+            "gridTemplateColumns": "repeat(auto-fill, minmax(280px, 1fr))", # Responsive grid
+            "gap": "10px", # Tighter gap
+            "padding": "15px",
             "overflowY": "auto",
             "height": "100%",
             "color": "white",
-            "fontFamily": "sans-serif"
+            "fontFamily": "'Segoe UI', sans-serif"
         },
         children=[
             html.Div(
-                style={"backgroundColor": "rgba(255,255,255,0.1)", "padding": "15px", "borderRadius": "5px"},
+                className="feature-card",
                 children=[
-                    html.H4(name, style={"marginTop": "0", "marginBottom": "5px", "color": "#FFD700"}),
-                    html.P(desc, style={"fontSize": "0.9em", "lineHeight": "1.4"})
+                    html.H4(
+                        children=[
+                            html.Span(name),
+                            html.Span("+", className="toggle-icon")
+                        ]
+                    ),
+                    html.P(desc)
                 ]
             ) for name, desc in features
         ]
     )
 
-def draw_area_plots(decades_list, current_decade, features=["Energy", "Danceability", "Valence", "Acousticness", "Instrumentalness"], opacity=1.0, bin_size=None, selected_genres=None):
+def draw_area_plots(decades_list, current_decade, features=["Energy", "Danceability", "Valence", "Acousticness", "Instrumentalness"], opacity=1.0, bin_size=None, selected_genres=None, highlighted_genre=None):
     # Use Plotly qualitative colors directly for genres
     import plotly.colors as pcolors
     import plotly.subplots as sp
@@ -382,13 +508,30 @@ def draw_area_plots(decades_list, current_decade, features=["Energy", "Danceabil
     # Loop through genres to create a trace for each genre line
     colors_cycle = pcolors.qualitative.Plotly # Standard Plotly colors
     
-    for g_idx, genre in enumerate(loop_genres):
+    # Sort loop_genres so that highlighted_genre is last (drawn on top)
+    if highlighted_genre and highlighted_genre in loop_genres:
+        loop_genres = [g for g in loop_genres if g != highlighted_genre] + [highlighted_genre]
+    
+    for g_idx, genre in enumerate(selected_genres or get_genres()): # Need original index for consistent coloring
+        if genre not in loop_genres: continue
+        
         genre_df = base_data[base_data['playlist_genre'] == genre].copy()
         
         if genre_df.empty:
             continue
             
         color = colors_cycle[g_idx % len(colors_cycle)]
+        
+        # Determine style based on highlight
+        line_width = 2
+        line_opacity = 0.6 if highlighted_genre else 1.0 # Dim others if one is highlighted
+        
+        if highlighted_genre:
+             if genre == highlighted_genre:
+                 line_width = 5 # Make thicker
+                 line_opacity = 1.0
+             else:
+                 line_opacity = 0.2 # Fade out non-highlighted significantly
         
         # Group by year for this genre
         # We calculate the mean of each feature per year
@@ -407,7 +550,8 @@ def draw_area_plots(decades_list, current_decade, features=["Energy", "Danceabil
                     y=grouped[feature], 
                     mode='lines', 
                     name=genre.title(), # Name appears in legend
-                    line=dict(color=color, width=2),
+                    line=dict(color=color, width=line_width),
+                    opacity=line_opacity,
                     legendgroup=genre, # Group legends so toggling one toggles all for that genre
                     showlegend=(i == 0) # Only show legend for first subplot to avoid duplicates
                 ),
@@ -418,6 +562,7 @@ def draw_area_plots(decades_list, current_decade, features=["Energy", "Danceabil
     # Fix x-axis range to cover the entire dataset period (e.g., 1950-2030) regardless of selected genre data
     for i in range(len(available_features)):
         fig_line.update_xaxes(range=[1950, 2030], row=i+1, col=1, title_text='') # Clean x-labels and fix range
+        fig_line.update_yaxes(range=[0, 1], row=i+1, col=1) # Fix y-axis range to [0, 1]
     
     # Add shared X-axis title at bottom
     fig_line.update_xaxes(title_text='Year', row=len(available_features), col=1)
@@ -595,7 +740,16 @@ def draw_spider(sidebar_tab, song1="6dOtVTDdiauQNBQEDOtlAB", song2="1d7Ptw3qYcfp
     # Update layout with transparent background and larger plot
     fig.update_layout(
         polar=dict(
-            radialaxis=dict(visible=True, range=[0, 1]),  # Normalized range
+            radialaxis=dict(
+                visible=True, 
+                range=[0, 1],
+                gridcolor="rgba(255, 255, 255, 0.2)", # Less intense white grid
+                linecolor="rgba(255, 255, 255, 0.2)"  # Less intense axis lines
+            ),
+            angularaxis=dict(
+                gridcolor="rgba(255, 255, 255, 0.2)", # Less intense angular grid
+                linecolor="rgba(255, 255, 255, 0.2)"
+            ),
             bgcolor="rgba(0,0,0,0)"  # Transparent polar background
         ),
         showlegend=True,
@@ -694,19 +848,22 @@ def create_decade_card(decade):
         'backgroundColor': '#fff',
         'border': '1px solid #ccc',
         'boxShadow': '5px 5px 10px rgba(0,0,0,0.1)',
-        'maxWidth': '500px',
-        'margin': '20px auto'
+        'maxWidth': '100%', # Allow it to fill the flex container
+        'height': '100%',   # Ensure it fills height
+        'display': 'flex',  # Use flex to manage internal scrolling
+        'flexDirection': 'column'
     }, children=[
         
         # A. The Colored Header (The "Tab")
         html.Div(style={
             'backgroundColor': color,
             'height': '15px',
-            'width': '100%'
+            'width': '100%',
+            'flexShrink': 0
         }),
         
         # B. The Content Window
-        html.Div(style={'padding': '25px'}, children=[
+        html.Div(style={'padding': '25px', 'overflowY': 'auto', 'flex': '1'}, children=[
             # Title
             html.H2(f"The {decade}", style={
                 'marginTop': '0', 
