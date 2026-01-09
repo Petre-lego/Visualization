@@ -7,7 +7,19 @@ from figures import *
 # This function arranges the plots in an html layout
 def draw_pane(topbar_tab, decades_list, current_decade, layout="grid", bin_size="5 months"):
     if topbar_tab == "topic-1":
-        pane = draw_figure(topbar_tab, decades_list, current_decade)
+        content = draw_figure(topbar_tab, decades_list, current_decade)
+        filename = current_decade + ".png"
+        pane = html.Div(
+            style={
+                "height": "100%", "width": "100%",
+                "backgroundImage": f"linear-gradient(to right, #1a1c2c 50%, transparent 50%), url('/assets/{filename}')", # Darker Discord-like blue
+                "backgroundSize": "cover",
+                "backgroundPosition": "center",
+                "backgroundRepeat": "no-repeat",
+                "display": "flex"
+            },
+            children=[content]
+        )
     elif topbar_tab == "topic-3":
         if layout == "grid":
             # Get available songs for the selected decade
@@ -80,25 +92,7 @@ def draw_pane(topbar_tab, decades_list, current_decade, layout="grid", bin_size=
         else:
             pane = f"You have selected Topbar Tab: {topbar_tab} and Sidebar Tab: {current_decade}, The layout you specified ({layout}) is not yet implemented"
     elif topbar_tab == "topic-4":
-        if layout == "grid":
-            pane = html.Div(
-                style={
-                    "padding": "30px",
-                    "display": "grid",
-                    "gridTemplateColumns": "1fr 1fr",
-                    "gridTemplateRows": "1fr 1fr",
-                    "gridGap": "30px",
-                    "background": "rgba(0,0,0,0)"
-                },
-                children=[
-                    html.Div(create_decade_card(current_decade), style={"background": "rgba(0,0,0,0)", "padding": "20px"}),
-                    html.Div("Future visualization", style={"background": "rgba(0,0,0,0)", "padding": "20px"}),
-                    html.Div(dcc.Graph(figure=draw_change(current_decade, genre_counts, "asc")), style={"background": "rgba(0,0,0,0)", "padding": "20px"}),
-                    html.Div(dcc.Graph(figure=draw_change(current_decade, genre_counts, "desc")), style={"background": "rgba(0,0,0,0)", "padding": "20px"}),
-                ],
-            )
-        else:
-            pane = f"Layout {layout} not implemented for topic-4"
+        pane = draw_figure(topbar_tab, decades_list, current_decade)
     elif topbar_tab == "topic-5":
         if layout == "grid":
             # Get available songs for the selected decade
@@ -271,13 +265,13 @@ app.layout = html.Div(id = "root_container", children=[
                 dcc.Tab(label="20s", value="20s"),
             ])
     ], 
-             style={"background" : "#3D2C2C", "height": "100vh"}), #Sidebar style
+             style={"background" : "#3D2C2C", "height": "100%"}), #Sidebar style: Changed to 100% to respect flex parent
         
         #Main content area
-        html.Div(id="content_area", children = "Here we will put the Main content area", style={"flex" : "1"}) #Flex 1 to take up all remaining space,
+        html.Div(id="content_area", children = "Here we will put the Main content area", style={"flex" : "1", "position": "relative", "overflow": "hidden"}) #Flex 1 to take up all remaining space, added overflow: hidden
     ],
     #Options
-    style={"display" : "flex", "flexDirection" : "row", "flex" : "1" } #flex 1 take up all remaining space but will not overrule total size of root container
+    style={"display" : "flex", "flexDirection" : "row", "flex" : "1", "minHeight": "0", "overflow": "hidden"} #flex 1 take up all remaining space but will not overrule total size of root container
     ),
 
     #Bottom bar (Credits logos and so on)
@@ -320,14 +314,135 @@ def render_content(topbar_tab_value, sidebar_tab_value, selected_decades, bin_si
 
     #This is for changing the background image depending on what decade is selected
     filename = sidebar_tab_value + ".png"
-    root_style = {"display" : "flex", "flexDirection" : "column", "height" : "100vh", "width" : "100vw", 
-                  "backgroundImage": f"url('/assets/{filename}')", 
-                  "background-size": "cover",
-                  "background-position": "center",
-                  "background-repeat": "no-repeat"
-                 }
+    root_style = {"display" : "flex", "flexDirection" : "column", "height" : "100vh", "width" : "100vw"}
+    
+    if topbar_tab_value != "topic-1":
+         root_style.update({
+              "backgroundImage": f"url('/assets/{filename}')", 
+              "background-size": "cover",
+              "background-position": "center",
+              "background-repeat": "no-repeat"
+         })
     
     return draw_pane(topbar_tab_value, selected_decades, sidebar_tab_value, bin_size=bin_size), root_style, selected_decades, sidebar_tab_value, animation_trigger
+
+# Callback for Analysis 1 Genre Filtering
+@app.callback(
+    Output("spider-graphs-container", "children"),
+    Output("analysis1-area", "figure"),
+    Input("genre-dropdown", "value"),
+    State("sidebar_tabs", "value"),
+)
+def update_analysis1(selected_genres, current_decade):
+    bin_size = "1 year" # Fixed bin size
+    # Only use the current decade, not accumulated decades
+    decades_list = [current_decade]
+    
+    # Generate list of spider graphs for the grid
+    spider_graphs_children = []
+    
+    if selected_genres:
+        # --- Dynamic Scaling Logic ---
+        num_genres = len(selected_genres)
+        
+        # Base values from CSS
+        base_w = 260
+        base_h = 280
+        base_m_vert = -20
+        base_m_horz = -5
+        
+        # Calculate scale factor
+        scale = 1.0
+        if num_genres > 15:
+            scale = 0.55
+        elif num_genres > 9:
+            scale = 0.65
+        elif num_genres > 4:
+            scale = 0.8
+            
+        # Apply scale
+        s_w = int(base_w * scale)
+        s_h = int(base_h * scale)
+        s_m_v = int(base_m_vert * scale)
+        s_m_h = int(base_m_horz * scale)
+        s_font = max(6, int(14 * scale)) # Minimum font size 6
+        
+        # Alternating background colors (lighter tones of the dark theme)
+        bg_colors = [
+            "rgba(60, 65, 90, 0.7)",  # Tone A
+            "rgba(75, 80, 105, 0.7)"   # Tone B
+        ]
+        
+        # Logic to insert breaks for 3-2-3-2 pattern
+        current_row_len = 0
+        target_row_len = 3 # Start with 3 items in first row
+        
+        for i, genre in enumerate(selected_genres):
+            # Calculate alternating background color
+            bg_color = bg_colors[i % len(bg_colors)]
+            
+            cell_style_override = {
+                "width": f"{s_w}px",
+                "height": f"{s_h}px",
+                "margin": f"{s_m_v}px {s_m_h}px",
+                "backgroundColor": bg_color
+            }
+
+            # Generate spider graph for this specific genre
+            # We reuse draw_spider_analysis1 but pass only [genre] to filter
+            fig = draw_spider_analysis1(decades_list, current_decade, selected_genres=[genre])
+            
+            # Customize layout for the grid item
+            fig.update_layout(
+                title=dict(text=f"{genre.title()}", font=dict(size=s_font), y=0.95),
+                margin=dict(l=20*scale, r=20*scale, t=40*scale, b=20*scale),
+                height=s_h, # Match container height
+                font=dict(size=max(8, 10*scale)) # Scale axis labels too
+            )
+            
+            spider_graphs_children.append(
+                html.Div(
+                    className="honeycomb-cell",
+                    style=cell_style_override,
+                    children=[
+                        dcc.Graph(
+                            figure=fig, 
+                            config={'displayModeBar': False},
+                            style={"height": "100%", "width": "100%"}
+                        )
+                    ]
+                )
+            )
+            
+            # Update Stacking Pattern Logic
+            current_row_len += 1
+            if current_row_len == target_row_len and i < len(selected_genres) - 1:
+                 # Insert Force Break
+                 spider_graphs_children.append(
+                     html.Div(style={"flexBasis": "100%", "height": "0", "margin": "0", "padding": "0"})
+                 )
+                 # Toggle pattern: 3 -> 2 -> 3 -> 2
+                 target_row_len = 2 if target_row_len == 3 else 3
+                 current_row_len = 0
+    else:
+        # Fallback: Show overall average if no genres selected
+        fig = draw_spider_analysis1(decades_list, current_decade)
+        fig.update_layout(title="All Genres Average", height=300)
+        spider_graphs_children.append(
+            html.Div(
+                className="honeycomb-cell",
+                children=[dcc.Graph(figure=fig, style={"height": "100%", "width": "100%"})]
+            )
+        )
+    
+    area_fig = draw_area_plots(
+        decades_list, 
+        current_decade, 
+        features=["Energy", "Tempo", "Danceability", "Loudness", "Liveness", "Valence", "Speechiness", "Acousticness", "Instrumentalness"],
+        bin_size=bin_size,
+        selected_genres=selected_genres
+    )
+    return spider_graphs_children, area_fig
 
 #------------------------------------------------------------------------#
 # Listen/Spider Tab

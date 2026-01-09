@@ -17,3 +17,47 @@ body {
     background-position: center; /* Centers the image */
     background-repeat: no-repeat; /* Prevents the image from repeating */
 }
+
+/* Honeycomb Stacking Layout */
+.honeycomb-grid {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: center;
+    align-items: center;
+    /* Negative margin to pull rows closer vertically. 
+       Adjust based on the aspect ratio of the hexagon. */
+    gap: 10px;
+    padding: 30px;
+    align-content: flex-start;
+}
+
+.honeycomb-cell {
+    width: 260px; 
+    height: 280px; 
+    position: relative;
+    
+    /* Hexagon Shape (Pointy topped) */
+    clip-path: polygon(50% 0%, 100% 25%, 100% 75%, 50% 100%, 0% 75%, 0% 25%);
+    
+    /* Pull them closer to simulate a hive. 
+       Horizontal touching is automatic with flex. 
+       Vertical pull is needed. */
+    margin: -20px -5px; 
+    
+    background-color: rgba(30, 30, 40, 0.7); 
+    border: 1px solid rgba(255,255,255,0.05); /* Border might get clipped */
+    
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    
+    transition: transform 0.2s ease, z-index 0s;
+    z-index: 1;
+}
+
+.honeycomb-cell:hover {
+    transform: scale(1.15); 
+    background-color: rgba(60, 60, 80, 0.95);
+    z-index: 100;
+}

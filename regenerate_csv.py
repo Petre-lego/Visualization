@@ -18,15 +18,41 @@ for file_path in file_paths:
 spotify_combined = pd.concat(database, ignore_index=True)
 
 # Preprocess
-spotify_combined["track_album_release_date"] = pd.to_datetime(spotify_combined["track_album_release_date"], format="mixed")
+spotify_combined["track_album_release_date"] = pd.to_datetime(spotify_combined["track_album_release_date"], format="mixed", errors='coerce')
 spotify_combined['year'] = spotify_combined['track_album_release_date'].dt.year
+
+# --- FIX RE-RELEASE DATES ---
+import re
+def clean_track_name(name):
+    if not isinstance(name, str): return str(name)
+    # Be aggressive in cleaning remaster/version info
+    name = re.sub(r' - .*Remaster.*', '', name, flags=re.IGNORECASE)
+    name = re.sub(r' \(.*Remaster.*\)', '', name, flags=re.IGNORECASE)
+    name = re.sub(r' - .*Version.*', '', name, flags=re.IGNORECASE)
+    name = re.sub(r' \(.*Version.*\)', '', name, flags=re.IGNORECASE)
+    name = re.sub(r' - .*Mix.*', '', name, flags=re.IGNORECASE)
+    return name.strip()
+
+spotify_combined['clean_name'] = spotify_combined['track_name'].apply(clean_track_name)
+
+# Find the minimum year for each (clean_name, artist) pair
+min_years = spotify_combined.groupby(['clean_name', 'track_artist'])['year'].min().reset_index()
+min_years = min_years.rename(columns={'year': 'original_year'})
+
+# Merge back to original dataframe
+spotify_combined = pd.merge(spotify_combined, min_years, on=['clean_name', 'track_artist'], how='left')
+
+# Update year and create decade from original_year
+# If original_year is NaN (shouldn't be), fallback to year
+spotify_combined['year'] = spotify_combined['original_year'].fillna(spotify_combined['year']).astype(int)
 spotify_combined['decade'] = (spotify_combined['year'] // 10) * 10
+# ----------------------------
 
 # Define features
 raw_features = ["energy", "danceability", "valence", "acousticness", "instrumentalness"]
 
 # Create subset
-metadata_cols = ['track_name', 'track_artist', 'decade', 'track_id', 'year', 'track_album_release_date']
+metadata_cols = ['track_name', 'track_artist', 'decade', 'track_id', 'year', 'track_album_release_date', 'playlist_genre']
 df_spider = spotify_combined[metadata_cols + raw_features].copy()
 
 # Normalize
