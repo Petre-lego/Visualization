@@ -181,13 +181,39 @@ def draw_figure(topbar_tab, decades_list, current_decade, song1=None, song2=None
                          ),
                          # Legend for Spider Graph Initials
                          html.Div(
+                             id="analysis1-legend-trigger", # Added ID for click interaction
+                             className="legend-container",
+                             n_clicks=0,
                              # E: Energy, D: Danceability, V: Valence, A: Acousticness, I: Instrumentalness
                              children=[
-                                 html.Span("E: Energy", style={"marginRight": "10px", "color": "#FF6B6B", "fontWeight": "bold"}),
-                                 html.Span("D: Danceability", style={"marginRight": "10px", "color": "#DA77F2", "fontWeight": "bold"}),
-                                 html.Span("V: Valence", style={"marginRight": "10px", "color": "#FFD93D", "fontWeight": "bold"}),
-                                 html.Span("A: Acousticness", style={"marginRight": "10px", "color": "#6BCB77", "fontWeight": "bold"}),
-                                 html.Span("I: Instrumentalness", style={"color": "#4D96FF", "fontWeight": "bold"})
+                                 html.Div([
+                                     html.Span("E: Energy", style={"marginRight": "10px", "color": "#FF6B6B", "fontWeight": "bold"}),
+                                     html.Span("D: Danceability", style={"marginRight": "10px", "color": "#DA77F2", "fontWeight": "bold"}),
+                                     html.Span("V: Valence", style={"marginRight": "10px", "color": "#FFD93D", "fontWeight": "bold"}),
+                                     html.Span("A: Acousticness", style={"marginRight": "10px", "color": "#6BCB77", "fontWeight": "bold"}),
+                                     html.Span("I: Instrumentalness", style={"color": "#4D96FF", "fontWeight": "bold"})
+                                 ]),
+                                 # Tooltip Content
+                                 html.Div([
+                                     html.Div([
+                                         # Column 1
+                                         html.Div([
+                                             html.Div([html.Strong("Energy", style={"color": "#FF6B6B", "display": "block", "marginBottom": "2px", "fontSize": "1.1em"}), html.Span("Intensity, speed, and noise level", style={"color": "white", "fontSize": "0.9em"})], style={"marginBottom": "12px"}),
+                                             html.Div([html.Strong("Danceability", style={"color": "#DA77F2", "display": "block", "marginBottom": "2px", "fontSize": "1.1em"}), html.Span("Rhythm stability and beat strength", style={"color": "white", "fontSize": "0.9em"})])
+                                         ], style={"flex": "1", "padding": "0 10px"}),
+                                         
+                                         # Column 2
+                                         html.Div([
+                                             html.Div([html.Strong("Valence", style={"color": "#FFD93D", "display": "block", "marginBottom": "2px", "fontSize": "1.1em"}), html.Span("Musical positiveness (Happy vs Sad)", style={"color": "white", "fontSize": "0.9em"})], style={"marginBottom": "12px"}),
+                                             html.Div([html.Strong("Acousticness", style={"color": "#6BCB77", "display": "block", "marginBottom": "2px", "fontSize": "1.1em"}), html.Span("Presence of acoustic instruments", style={"color": "white", "fontSize": "0.9em"})])
+                                         ], style={"flex": "1", "padding": "0 10px", "borderLeft": "1px solid rgba(255,255,255,0.1)", "borderRight": "1px solid rgba(255,255,255,0.1)"}),
+                                         
+                                         # Column 3
+                                         html.Div([
+                                             html.Div([html.Strong("Instrumentalness", style={"color": "#4D96FF", "display": "block", "marginBottom": "2px", "fontSize": "1.1em"}), html.Span("Likelihood of no vocal content", style={"color": "white", "fontSize": "0.9em"})])
+                                         ], style={"flex": "1", "padding": "0 10px"})
+                                     ], style={"display": "flex", "flexDirection": "row", "justifyContent": "space-between", "textAlign": "left", "paddingTop": "5px"})
+                                 ], id="analysis1-legend-content", className="legend-tooltip") # Added ID for callback target
                              ],
                              style={
                                  "textAlign": "center", 
@@ -196,7 +222,8 @@ def draw_figure(topbar_tab, decades_list, current_decade, song1=None, song2=None
                                  "fontFamily": "sans-serif",
                                  "backgroundColor": "rgba(0,0,0,0.3)", # Added bg for better contrast
                                  "padding": "5px",
-                                 "borderRadius": "5px"
+                                 "borderRadius": "5px",
+                                 "cursor": "pointer" # Changed to pointer to indicate clickability
                              }
                          ),
                          # Grid for Spider Graphs (container) - Top 66%

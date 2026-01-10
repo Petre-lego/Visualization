@@ -615,6 +615,35 @@ def update_area_opacity(bin_size, decade, selected_decades):
     figure = draw_area_plots(selected_decades, decade, features=["Energy", "Danceability", "Valence", "Acousticness", "Instrumentalness", "Loudness", "Tempo", "Liveness"], bin_size=bin_size)
     return figure
 
+# Callback for Analysis 1 Legend Toggle
+@app.callback(
+    Output("analysis1-legend-content", "style"),
+    Input("analysis1-legend-trigger", "n_clicks"),
+    prevent_initial_call=True
+)
+def toggle_legend(n_clicks):
+    if n_clicks and n_clicks % 2 == 1:
+        # Expanded State: Relative positioning forces the parent container to expand
+        return {
+            "visibility": "visible", 
+            "opacity": 1,
+            "display": "block",
+            "position": "relative", 
+            "top": "0", 
+            "left": "0", 
+            "transform": "none", 
+            "width": "100%", 
+            "marginTop": "10px",
+            "boxShadow": "none",
+            "border": "none",
+            "backgroundColor": "transparent" # Blend in with the container
+        }
+    else:
+        # Collapsed State: Remove from flow
+        return {
+            "display": "none"
+        }
+
 # Run the app
 if __name__ == "__main__":
     app.run(debug=True, port = 8052)
