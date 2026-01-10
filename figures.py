@@ -601,9 +601,16 @@ def draw_area_plots(decades_list, current_decade, features=["Energy", "Danceabil
         title_text="Audio Features Evolution by Genre", 
         autosize=True, 
         margin=dict(t=50, b=30, l=30, r=30),
-        title_font=dict(size=14),
-        legend=dict(orientation="h", y=1.02, xanchor="right", x=1) # Horizontal legend top right
+        title_font=dict(size=14, color="white"),
+        legend=dict(orientation="h", y=1.02, xanchor="right", x=1, font=dict(color="white")), # Horizontal legend top right
+        paper_bgcolor="rgba(30, 30, 40, 0.7)", # Match Spider Graph Background
+        plot_bgcolor="rgba(30, 30, 40, 0.7)",
+        font=dict(color="white")
     )
+    
+    # Update axes to match dark theme
+    fig_line.update_xaxes(showgrid=True, gridcolor="rgba(255,255,255,0.1)", zerolinecolor="rgba(255,255,255,0.1)")
+    fig_line.update_yaxes(showgrid=True, gridcolor="rgba(255,255,255,0.1)", zerolinecolor="rgba(255,255,255,0.1)")
     
     # Decrease subplot title font size
     fig_line.update_annotations(font=dict(size=10))
