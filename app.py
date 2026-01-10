@@ -50,6 +50,13 @@ def draw_pane(topbar_tab, decades_list, current_decade, layout="grid", bin_size=
                                 value=available_songs[0][1] if available_songs else None,
                                 style={"color": "black"}
                             ),
+                            # Checkbox for Genre 1 Average
+                            dcc.Checklist(
+                                id='genre-1-avg-checkbox',
+                                options=[{'label': ' Show Genre Average', 'value': 'show'}],
+                                value=[],
+                                style={"color": "white", "fontSize": "0.9em"}
+                            ),
                             html.Iframe(
                                 id="player-1",
                                 src="https://open.spotify.com/embed/track/2plbrEY59IikOBgBGLjaoe", 
@@ -73,6 +80,13 @@ def draw_pane(topbar_tab, decades_list, current_decade, layout="grid", bin_size=
                                 options=song_options,
                                 value=available_songs[1][1] if len(available_songs) > 1 else available_songs[0][1],
                                 style={"color": "black"}
+                            ),
+                            # Checkbox for Genre 2 Average
+                            dcc.Checklist(
+                                id='genre-2-avg-checkbox',
+                                options=[{'label': ' Show Genre Average', 'value': 'show'}],
+                                value=[],
+                                style={"color": "white", "fontSize": "0.9em"}
                             ),
                             html.Iframe(
                                 id="player-2",
@@ -321,14 +335,14 @@ def update_analysis1(selected_genres, current_decade):
         target_row_len = 3 # Start with 3 items in first row
         
         # Color cycle to match area plots
-        colors_cycle = px.colors.qualitative.Plotly
+        # (Using global GENRE_COLOR_MAP for consistency)
         
         for i, genre in enumerate(selected_genres):
             # Calculate alternating background color
             bg_color = bg_colors[i % len(bg_colors)]
             
             # Select line color matching the area plot
-            line_color = colors_cycle[i % len(colors_cycle)]
+            line_color = GENRE_COLOR_MAP.get(genre, '#888888')
             
             cell_style_override = {
                 "width": f"{s_w}px",
@@ -449,11 +463,15 @@ def update_area_highlight(click_data_list, current_figure):
     Output(component_id="spider-graph", component_property="figure"),
     Input(component_id="song-1-dropdown", component_property="value"),
     Input(component_id="song-2-dropdown", component_property="value"),
+    Input(component_id="genre-1-avg-checkbox", component_property="value"),
+    Input(component_id="genre-2-avg-checkbox", component_property="value"),
     State(component_id="sidebar_tabs", component_property="value"),
 )
-def update_spider_graph(song1, song2, decade):
+def update_spider_graph(song1, song2, show_genre1_list, show_genre2_list, decade):
+    show_genre1 = bool(show_genre1_list) # Checklist returns list ['show'] or []
+    show_genre2 = bool(show_genre2_list)
     if song1 and song2:
-        figure = draw_spider(decade, song1, song2)
+        figure = draw_spider(decade, song1, song2, show_genre1, show_genre2)
         return figure
     return {}
 
