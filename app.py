@@ -31,61 +31,76 @@ def draw_pane(topbar_tab, decades_list, current_decade, layout="grid", bin_size=
                 style={
                     "padding": "30px",
                     "display": "grid",
-                    "gridTemplateColumns": "1fr  1fr",  # Columns 1 and 3 are wider
-                    "gridTemplateRows": "1fr 1fr auto",  # First row is fixed, second row fills available space
-                    "gridGap": "30px",
-                    "background": "rgba(0,0,0,0)"  # Transparent background for the grid
+                    "gridTemplateColumns": "1fr 1fr",  # 2 columns
+                    "gridTemplateRows": "auto auto 1fr",  # Rows for Dropdowns, Players, Graph
+                    "gridGap": "20px",
+                    "background": "rgba(0,0,0,0)",
+                    "height": "100%",
+                    "boxSizing": "border-box"
                 },
                 children=[
+                    # Song 1 Selection
                     html.Div(
-                        dcc.Dropdown(
-                            id="song-1-dropdown",
-                            options=song_options,
-                            value=available_songs[0][1] if available_songs else None,
-                            style={"color": "black"}
-                        ),
-                        style={"background": "rgba(0,0,0,0)", "padding": "20px"}
-                    ),
-                    html.Div(
-                        html.Iframe(
-                        id="player-1",  # We need an ID to target this with a callback
-                        src="https://open.spotify.com/embed/track/2plbrEY59IikOBgBGLjaoe", # Initial song (some bruno mars bs)
-                        style={
-                            "height": "80px", # Spotify compact players look good at 80px or 152px
-                            "width": "100%", 
-                            "border": "0",    # Removes the ugly default border
-                            "borderRadius": "12px" # makes it look modern
-                            }
+                        style={"display": "flex", "flexDirection": "column", "gap": "10px", "background": "rgba(30, 30, 40, 0.7)", "padding": "15px", "borderRadius": "10px", "border": "1px solid rgba(255,255,255,0.05)"},
+                        children=[
+                            html.H4("Select Song 1", style={"margin": "0 0 5px 0", "color": "white"}), 
+                            dcc.Dropdown(
+                                id="song-1-dropdown",
+                                options=song_options,
+                                value=available_songs[0][1] if available_songs else None,
+                                style={"color": "black"}
+                            ),
+                            html.Iframe(
+                                id="player-1",
+                                src="https://open.spotify.com/embed/track/2plbrEY59IikOBgBGLjaoe", 
+                                style={
+                                    "height": "80px", 
+                                    "width": "100%", 
+                                    "border": "0",
+                                    "borderRadius": "8px"
+                                }
                             )
-
+                        ]
                     ),
+                    
+                    # Song 2 Selection
                     html.Div(
-                        dcc.Dropdown(
-                            id="song-2-dropdown",
-                            options=song_options,
-                            value=available_songs[1][1] if len(available_songs) > 1 else available_songs[0][1],
-                            style={"color": "black"}
-                        ),
-                        style={"background": "rgba(0,0,0,0)", "padding": "20px"}
-                    ),
-                    html.Div(
-                        html.Iframe(
-                        id="player-2",  # We need an ID to target this with a callback
-                        src="https://open.spotify.com/embed/track/2plbrEY59IikOBgBGLjaoe", # Initial song (some bruno mars bs)
-                        style={
-                            "height": "80px", # Spotify compact players look good at 80px or 152px
-                            "width": "100%", 
-                            "border": "0",    # Removes the ugly default border
-                            "borderRadius": "12px" # makes it look modern
-                            }
+                         style={"display": "flex", "flexDirection": "column", "gap": "10px", "background": "rgba(30, 30, 40, 0.7)", "padding": "15px", "borderRadius": "10px", "border": "1px solid rgba(255,255,255,0.05)"},
+                         children=[
+                            html.H4("Select Song 2", style={"margin": "0 0 5px 0", "color": "white"}),
+                            dcc.Dropdown(
+                                id="song-2-dropdown",
+                                options=song_options,
+                                value=available_songs[1][1] if len(available_songs) > 1 else available_songs[0][1],
+                                style={"color": "black"}
+                            ),
+                            html.Iframe(
+                                id="player-2",
+                                src="https://open.spotify.com/embed/track/2plbrEY59IikOBgBGLjaoe", 
+                                style={
+                                    "height": "80px", 
+                                    "width": "100%", 
+                                    "border": "0",
+                                    "borderRadius": "8px"
+                                }
                             )
+                        ]
                     ),
+                    
+                    # Spider Graph Area
                     html.Div(
-                        dcc.Graph(id="spider-graph", figure=draw_figure(topbar_tab, decades_list, current_decade, song1=available_songs[0][1], song2=available_songs[1][1])),
+                        dcc.Graph(
+                            id="spider-graph", 
+                            figure=draw_figure(topbar_tab, decades_list, current_decade, song1=available_songs[0][1], song2=available_songs[1][1]),
+                            style={"height": "100%", "width": "100%"}
+                        ),
                         style={
-                            "background": "rgba(0,0,0,0)",  # Transparent background for the graph container
+                            "background": "rgba(30, 30, 40, 0.7)",  # Matching background
                             "padding": "20px",
-                            "gridColumn": "1 / -1",  # Span across all columns in the second row
+                            "gridColumn": "1 / -1",  
+                            "borderRadius": "10px",
+                            "border": "1px solid rgba(255,255,255,0.05)",
+                            "minHeight": "0"
                         },
                     ),
                 ],
@@ -95,128 +110,6 @@ def draw_pane(topbar_tab, decades_list, current_decade, layout="grid", bin_size=
     elif topbar_tab == "topic-4":
         pane = draw_figure(topbar_tab, decades_list, current_decade)
     
-    elif topbar_tab == "topic-5":
-        if layout == "grid":
-            # Get available songs for the selected decade
-            available_songs = get_songs_for_decade(current_decade)
-            song_options = [{"label": song_name, "value": track_id} for song_name, track_id in available_songs]
-            
-            pane = html.Div(
-                style={
-                    "padding": "6px",
-                    "display": "grid",
-                    "gridTemplateColumns": "1fr 1fr 1fr",
-                    "gridTemplateRows": "1fr auto auto 1fr 1fr",
-                    "gridGap": "6px",
-                    "background": "rgba(0,0,0,0)"
-                },
-                children=[
-                    # Row 1
-                    html.Div([
-                        html.Div(
-                            dcc.Graph(figure=draw_spider_analysis1(decades_list, current_decade), style={'height': '100%', 'width': '100%'}),
-                            style={"flex": "2", "position": "relative"} # Top 66%
-                        ),
-                        html.Div(
-                            dcc.Graph(figure=draw_genre_trends_overlay(current_decade), style={'height': '100%', 'width': '100%'}),
-                            style={"flex": "1", "minHeight": "0"} # Bottom 33% (1/(2+1))
-                        ),
-
-                    ], style={"background": "rgba(0,0,0,0)", "padding": "3px", "minWidth": "0", "position": "relative", "display": "flex", "flexDirection": "column", "height": "100%"}),
-                    html.Div(dcc.Graph(id='area-plots-graph', figure=draw_area_plots(decades_list, current_decade, features=["Energy", "Danceability", "Valence", "Acousticness", "Instrumentalness", "Loudness", "Tempo", "Liveness"])), style={"background": "rgba(0,0,0,0)", "padding": "3px", "minWidth": "0"}),
-                    html.Div(
-                        style={"display": "flex", "flexDirection": "column", "height": "100%"},
-                        children=[
-                            html.Div(create_decade_card(current_decade), style={"flex": "2", "background": "rgba(0,0,0,0)", "padding": "3px"}),
-                            html.Div(
-                                style={"flex": "1", "display": "flex", "flexDirection": "row"},
-                                children=[
-                                    html.Div(dcc.Graph(figure=draw_change(current_decade, genre_counts, "asc")), style={"flex": "1", "background": "rgba(0,0,0,0)", "padding": "3px"}),
-                                    html.Div(dcc.Graph(figure=draw_change(current_decade, genre_counts, "desc")), style={"flex": "1", "background": "rgba(0,0,0,0)", "padding": "3px"})
-                                ]
-                            )
-                        ]
-                    ),
-                    
-                    # Timeline
-                    html.Div([
-                        dcc.Dropdown(
-                            id="bin-size-dropdown",
-                            options=[
-                                {"label": "No bins", "value": "No bins"},
-                                {"label": "1 week", "value": "1 week"},
-                                {"label": "1 month", "value": "1 month"},
-                                {"label": "5 months", "value": "5 months"}
-                            ],
-                            value=bin_size,
-                            style={"position": "absolute", "top": "10px", "left": "10px", "zIndex": "10", "color": "black", "width": "150px"}
-                        ),
-                        dcc.Graph(id="timeline-graph", figure=draw_timeline(current_decade, bin_size))
-                    ], style={"gridColumn": "1 / 4", "minWidth": "0", "position": "relative"}),
-                    
-                    # Row 2
-                    html.Div([
-                        dcc.Dropdown(
-                            id="song-1-dropdown",
-                            options=song_options,
-                            value=available_songs[0][1] if available_songs else None,
-                            style={"color": "black", "marginBottom": "10px"}
-                        ),
-                        dcc.Dropdown(
-                            id="song-2-dropdown",
-                            options=song_options,
-                            value=available_songs[1][1] if len(available_songs) > 1 else available_songs[0][1],
-                            style={"color": "black"}
-                        )
-                    ], style={"background": "rgba(0,0,0,0)", "padding": "3px", "display": "flex", "flexDirection": "column", "minWidth": "0"}),
-                    html.Div([
-                        html.Iframe(
-                            id="player-1",
-                            src="https://open.spotify.com/embed/track/2plbrEY59IikOBgBGLjaoe",
-                            style={
-                                "height": "80px",
-                                "width": "100%", 
-                                "border": "0",
-                                "borderRadius": "12px",
-                                "marginBottom": "10px"
-                            }
-                        ),
-                        html.Iframe(
-                            id="player-2",
-                            src="https://open.spotify.com/embed/track/2plbrEY59IikOBgBGLjaoe",
-                            style={
-                                "height": "80px",
-                                "width": "100%", 
-                                "border": "0",
-                                "borderRadius": "12px"
-                            }
-                        )
-                    ], style={"background": "rgba(0,0,0,0)", "padding": "3px", "display": "flex", "flexDirection": "column", "minWidth": "0"}),
-                    html.Div([
-                        dcc.Graph(id="spider-graph", figure=draw_spider(current_decade, available_songs[0][1] if available_songs else None, available_songs[1][1] if len(available_songs) > 1 else None)),
-                        html.Div([
-                            html.Div("i", className="info-icon"),
-                            html.Div([
-                                 html.H4("Audio Features Key"),
-                                 html.Ul([
-                                     html.Li([html.Strong("Energy: "), "Intensity/Speed/Noise"]),
-                                     html.Li([html.Strong("Danceability: "), "Rhythm stability/Beat"]),
-                                     html.Li([html.Strong("Valence: "), "Musical Positiveness (Happy vs Sad)"]),
-                                     html.Li([html.Strong("Acousticness: "), "Unplugged/Natural sound"]),
-                                     html.Li([html.Strong("Instrumentalness: "), "Lack of vocals"])
-                                 ])
-                            ], className="info-tooltip")
-                        ], className="info-container")
-                    ], style={"background": "rgba(0,0,0,0)", "padding": "3px", "minWidth": "0", "position": "relative"}),
-                    
-                    # Row 3
-                    html.Div(style={"background": "rgba(0,0,0,0)", "padding": "3px", "minWidth": "0"}),
-                    html.Div(style={"background": "rgba(0,0,0,0)", "padding": "3px", "minWidth": "0"}),
-                    html.Div(style={"background": "rgba(0,0,0,0)", "padding": "3px", "minWidth": "0"})
-                ]
-            )
-        else:
-            pane = f"You have selected Topbar Tab: {topbar_tab} and Sidebar Tab: {current_decade}, The layout you specified ({layout}) is not yet implemented"
     else:
         if layout == "grid":
             pane = html.Div(
@@ -267,8 +160,7 @@ app.layout = html.Div(id = "root_container", children=[
             children=[
             dcc.Tab(label="Analysis 1", value="topic-1", className="top-tab", selected_className="top-tab--selected"),
             dcc.Tab(label="Compare/Listen", value="topic-3", className="top-tab", selected_className="top-tab--selected"),
-            dcc.Tab(label="Changes", value="topic-4", className="top-tab", selected_className="top-tab--selected"),
-            dcc.Tab(label="Prototype Dashboard", value="topic-5", className="top-tab", selected_className="top-tab--selected")
+            dcc.Tab(label="Changes", value="topic-4", className="top-tab", selected_className="top-tab--selected")
         ])
     ], 
              style={"background" : "rgba(20, 22, 35, 0.95)", "flexDirection" : "column", "borderBottom": "1px solid rgba(255,255,255,0.1)", "boxShadow": "0 4px 15px rgba(0,0,0,0.3)", "zIndex": "1001"}), 

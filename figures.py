@@ -777,22 +777,30 @@ def draw_spider(sidebar_tab, song1="6dOtVTDdiauQNBQEDOtlAB", song2="1d7Ptw3qYcfp
             radialaxis=dict(
                 visible=True, 
                 range=[0, 1],
-                gridcolor="rgba(255, 255, 255, 0.2)", # Less intense white grid
-                linecolor="rgba(255, 255, 255, 0.2)"  # Less intense axis lines
+                gridcolor="rgba(255, 255, 255, 0.1)", # Less intense white grid
+                linecolor="rgba(255, 255, 255, 0.1)"  # Less intense axis lines
             ),
             angularaxis=dict(
-                gridcolor="rgba(255, 255, 255, 0.2)", # Less intense angular grid
-                linecolor="rgba(255, 255, 255, 0.2)"
+                gridcolor="rgba(255, 255, 255, 0.1)", # Less intense angular grid
+                linecolor="rgba(255, 255, 255, 0.1)"
             ),
-            bgcolor="rgba(0,0,0,0)"  # Transparent polar background
+            bgcolor="rgba(30,30,40,0.7)"  # Dark theme background like analysis 1
         ),
         showlegend=True,
-        title=f"Spider Graph for {song1_name} and {song2_name} ({sidebar_tab})",
-        paper_bgcolor="rgba(0,0,0,0.5)",  # Transparent canvas background
+        title=dict(text=f"Comparison: {song1_name} vs {song2_name}", font=dict(color="white", size=14)),
+        paper_bgcolor="rgba(0,0,0,0)",  # Transparent canvas background
         plot_bgcolor="rgba(0,0,0,0)",  # Transparent plot area
         font=dict(color="white"),  # White text for visibility
-        autosize=True,
-        margin=dict(l=80, r=80, t=100, b=80)  # Larger margins for the plot
+        autosize=True, # Allow autosize but margin controls actual size within container
+        margin=dict(l=40, r=40, t=60, b=40),
+        legend=dict(
+            orientation="h",
+            yanchor="bottom",
+            y=1.02,
+            xanchor="right",
+            x=1,
+            font=dict(color="white")
+        )
     )
 
     # Return the figure object directly
